@@ -191,7 +191,7 @@
                 if (liff.isInClient()) {
                     await liff.sendMessages([{
                         type: 'text',
-                        text: `✅ บันทึกข้อมูลเรียบร้อย\n\nผู้แจ้ง: ${payload.lineName}\nโปรเจกต์: ${payload.project}\nเวลา: ${new Date().toLocaleString('th-TH')}`
+                        text: `✅ Saved successfully\n\nName: ${payload.lineName}\nProject: ${payload.project}\nTime: ${new Date().toLocaleString('th-TH')}`
                     }]);
                 }
 
