@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
-    <meta http-equiv="Expires" content="0">    
+    <meta http-equiv="Expires" content="0">      
     <title>Hrientec - Data Collection</title>
     <!-- Tailwind CSS for modern UI -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,7 +13,7 @@
     <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
     <style>
         :root {
-            --hrientec-blue: #004a99; /* โทนสีน้ำเงินจากโลโก้ hrientec */
+            --hrientec-blue: #004a99;
             --hrientec-light: #f4f7f6;
         }
         body { background-color: var(--hrientec-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
@@ -31,6 +31,23 @@
             margin-bottom: 1rem;
             font-size: 0.875rem;
         }
+
+        /* Checkbox styling */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            cursor: pointer;
+            border-radius: 0.375rem;
+            transition: background 0.2s;
+        }
+        .checkbox-container:hover { background-color: #f1f5f9; }
+        input[type="checkbox"] {
+            width: 1.25rem;
+            height: 1.25rem;
+            margin-right: 0.75rem;
+            accent-color: var(--hrientec-blue);
+        }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -42,15 +59,15 @@
         </div>
 
         <!-- Form Section -->
-        <form id="dataForm" class="p-6 space-y-5">
+        <form id="dataForm" class="p-6 space-y-6">
             <div id="setupWarning" class="hidden config-warning">
                 <strong>Warning:</strong> Please configure <code>WEB_APP_URL</code> and <code>LIFF_ID</code> in the code.
             </div>
 
-            <!-- 1. LINE Name (Auto-filled) -->
+            <!-- 1. LINE Name -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Name (LINE Name)</label>
-                <input type="text" id="lineName" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 shadow-sm focus:outline-none" placeholder="Loading profile...">
+                <input type="text" id="lineName" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 shadow-sm focus:outline-none">
             </div>
 
             <!-- 2. Project Selection -->
@@ -61,10 +78,41 @@
                 </select>
             </div>
 
-            <!-- 3. Details -->
+            <!-- 4. PPE Devices Used -->
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-700">4. PPE devices used <span class="text-red-500">*</span></label>
+                <div id="ppe_list" class="grid grid-cols-1 gap-1">
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="1.Safety shoes"> 1.Safety shoes
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="2.Helmet"> 2.Helmet
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="3.Safety glasses"> 3.Safety glasses
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="4.Eare plug"> 4.Eare plug
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="5.Air filter mask"> 5.Air filter mask
+                    </label>
+                    <label class="checkbox-container">
+                        <input type="checkbox" name="ppe" value="6.Do not use" id="ppe_none"> 6.Do not use
+                    </label>
+                </div>
+            </div>
+
+            <!-- Conditional Reason Field -->
+            <div id="ppe_note_container" class="hidden animate-pulse">
+                <label class="block text-sm font-medium text-red-700">Reason for "Do not use" <span class="text-red-500">*</span></label>
+                <input type="text" id="ppe_note" class="mt-1 block w-full px-3 py-2 border border-red-300 rounded-md shadow-sm focus:ring-red-500 focus:border-red-500" placeholder="Please specify reason...">
+            </div>
+
+            <!-- 5. Details -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">Work Details</label>
-                <textarea id="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]" placeholder="Enter details..."></textarea>
+                <label class="block text-sm font-medium text-gray-700">Other Details</label>
+                <textarea id="details" rows="2" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]" placeholder="Enter other details..."></textarea>
             </div>
 
             <!-- Submit Button -->
@@ -81,25 +129,31 @@
     </div>
 
     <script>
-        // --- CONFIGURATION ---
         const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQG8oY7s7nI1PqIKwkFw47tOxUXmOJ5oanQR6ebhri3L8XNr6OW1edt1FCnYFIGP2Y/exec"; 
         const LIFF_ID = "2009016720-tTy5Qvq2"; 
-
+        
         let userData = { name: '', userId: '' };
 
-        function isConfigValid() {
-            return WEB_APP_URL.startsWith("https://") && !LIFF_ID.includes("_ของคุณ");
-        }
+        // Handle PPE "Do not use" visibility
+        document.getElementById('ppe_none').addEventListener('change', function() {
+            const container = document.getElementById('ppe_note_container');
+            const noteInput = document.getElementById('ppe_note');
+            if (this.checked) {
+                container.classList.remove('hidden');
+                noteInput.required = true;
+            } else {
+                container.classList.add('hidden');
+                noteInput.required = false;
+                noteInput.value = '';
+            }
+        });
 
         async function initLiff() {
-            if (!isConfigValid()) {
+            if (!WEB_APP_URL.startsWith("https://") || LIFF_ID.includes("_ของคุณ")) {
                 document.getElementById('setupWarning').classList.remove('hidden');
-                document.getElementById('project').innerHTML = '<option value="">-- Please set URL in code --</option>';
                 return;
             }
-
             fetchProjects(); 
-            
             try {
                 await liff.init({ liffId: LIFF_ID });
                 if (liff.isLoggedIn()) {
@@ -110,42 +164,33 @@
                 } else {
                     liff.login();
                 }
-            } catch (err) {
-                console.error("LIFF Init Error:", err);
-                document.getElementById('lineName').placeholder = "Cannot connect to LINE";
-            }
+            } catch (err) { console.error("LIFF Error:", err); }
         }
 
         async function fetchProjects() {
             const select = document.getElementById('project');
             try {
                 const response = await fetch(WEB_APP_URL);
-                if (!response.ok) throw new Error("Network response was not ok");
-                
                 const data = await response.json();
-                
-                if (data.status === "success" && data.projects) {
+                if (data.status === "success") {
                     select.innerHTML = '<option value="">-- Please select project --</option>';
                     data.projects.forEach(p => {
                         let opt = document.createElement('option');
-                        opt.value = p;
-                        opt.innerHTML = p;
-                        select.appendChild(opt);
+                        opt.value = p; opt.innerHTML = p; select.appendChild(opt);
                     });
-                } else {
-                    throw new Error(data.message || "Data format error");
                 }
-            } catch (err) {
-                console.error("Fetch Projects Error:", err);
-                select.innerHTML = '<option value="">-- Failed to load projects --</option>';
-            }
+            } catch (err) { select.innerHTML = '<option value="">-- Failed to load --</option>'; }
         }
 
         document.getElementById('dataForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            if (!isConfigValid()) {
-                alert("System is not configured yet.");
+            // Collect PPE selections
+            const selectedPPE = Array.from(document.querySelectorAll('input[name="ppe"]:checked'))
+                                    .map(cb => cb.value);
+            
+            if (selectedPPE.length === 0) {
+                alert("Please select at least one PPE device.");
                 return;
             }
 
@@ -156,6 +201,8 @@
                 lineName: userData.name || "Anonymous",
                 userId: userData.userId || "n/a",
                 project: document.getElementById('project').value,
+                ppeDevices: selectedPPE.join(", "), // รวมอุปกรณ์เป็น String ขั้นด้วย Comma
+                ppeNote: document.getElementById('ppe_note').value,
                 details: document.getElementById('details').value
             };
 
@@ -170,21 +217,15 @@
                     body: JSON.stringify(payload)
                 });
 
-                // --- ENGLISH RETURN MESSAGE ---
                 if (liff.isInClient()) {
                     await liff.sendMessages([{
                         type: 'text',
-                        text: `✅ Submission Successful\n\nName: ${payload.lineName}\nProject: ${payload.project}\nTime: ${new Date().toLocaleString('en-US', { hour12: false })}`
+                        text: `✅ Submission Successful\n\nName: ${payload.lineName}\nProject: ${payload.project}\nPPE: ${payload.ppeDevices}\nTime: ${new Date().toLocaleString('en-US', { hour12: false })}`
                     }]);
                 }
-
-                setTimeout(() => {
-                    liff.closeWindow();
-                }, 1500);
-
+                setTimeout(() => liff.closeWindow(), 1500);
             } catch (err) {
-                console.error("Submission Error:", err);
-                alert("Error while saving data. Please try again.");
+                alert("Error while saving data.");
                 loader.classList.add('hidden');
                 submitBtn.disabled = false;
             }
