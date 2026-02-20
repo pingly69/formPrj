@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hrientec - Data Collection</title>
+    <!-- Tailwind CSS for modern UI -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- LINE SDK -->
+    <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <style>
+        :root {
+            --hrientec-blue: #004a99; /* โทนสีน้ำเงินจากโลโก้ hrientec */
+            --hrientec-light: #f4f7f6;
+        }
+        body { background-color: var(--hrientec-light); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .btn-primary { background-color: var(--hrientec-blue); transition: all 0.3s; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .loader { border-top-color: var(--hrientec-blue); animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden border-t-4 border-[#004a99]">
+        <!-- Header Section -->
+        <div class="p-6 text-center border-b">
+            <h1 class="text-2xl font-bold text-[#004a99]">ระบบบันทึกข้อมูล</h1>
+            <p class="text-gray-500 text-sm mt-1">Hrientec Engineering & Technology</p>
+        </div>
+
+        <!-- Form Section -->
+        <form id="dataForm" class="p-6 space-y-5">
+            <!-- 1. ชื่อผู้ใช้งาน LINE (Auto-filled) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">ชื่อผู้แจ้ง (LINE Name)</label>
+                <input type="text" id="lineName" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 shadow-sm focus:outline-none" placeholder="กำลังโหลดข้อมูล LINE...">
+            </div>
+
+            <!-- 2. เลือกโปรเจกต์ (Dynamic Dropdown) -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Project <span class="text-red-500">*</span></label>
+                <select id="project" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]">
+                    <option value="">-- กรุณาเลือกโปรเจกต์ --</option>
+                </select>
+            </div>
+
+            <!-- 3. รายละเอียดเพิ่มเติม -->
+            <div>
+                <label class="block text-sm font-medium text-gray-700">รายละเอียดงาน</label>
+                <textarea id="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]" placeholder="ระบุรายละเอียด..."></textarea>
+            </div>
+
+            <!-- Submit Button -->
+            <button type="submit" id="submitBtn" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:bg-gray-400">
+                <span id="btnText">บันทึกข้อมูล</span>
+            </button>
+        </form>
+    </div>
+
+    <!-- Processing Overlay -->
+    <div id="loader" class="fixed inset-0 bg-black/50 hidden flex flex-col items-center justify-center z-50">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+        <h2 class="text-white text-xl font-semibold">กำลังประมวลผล...</h2>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQG8oY7s7nI1PqIKwkFw47tOxUXmOJ5oanQR6ebhri3L8XNr6OW1edt1FCnYFIGP2Y/exec"; // แก้ไขจุดนี้
+        const LIFF_ID = "2009016720-tTy5Qvq2"; // แก้ไขจุดนี้
+
+        let userData = { name: '', userId: '' };
+
+        // 1. Initialize LIFF
+        async function initLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+                if (liff.isLoggedIn()) {
+                    const profile = await liff.getProfile();
+                    userData.name = profile.displayName;
+                    userData.userId = profile.userId;
+                    document.getElementById('lineName').value = userData.name;
+                    fetchProjects(); // Load projects once logged in
+                } else {
+                    liff.login();
+                }
+            } catch (err) {
+                console.error("LIFF Init Error:", err);
+            }
+        }
+
+        // 2. Fetch Projects from Google Sheets
+        async function fetchProjects() {
+            try {
+                const response = await fetch(WEB_APP_URL);
+                const data = await response.json();
+                const select = document.getElementById('project');
+                if (data.projects) {
+                    data.projects.forEach(p => {
+                        let opt = document.createElement('option');
+                        opt.value = p;
+                        opt.innerHTML = p;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.error("Fetch Projects Error:", err);
+            }
+        }
+
+        // 3. Handle Form Submission
+        document.getElementById('dataForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const submitBtn = document.getElementById('submitBtn');
+            const loader = document.getElementById('loader');
+            
+            const payload = {
+                lineName: userData.name,
+                userId: userData.userId,
+                project: document.getElementById('project').value,
+                details: document.getElementById('details').value
+            };
+
+            // Show Loading UI
+            loader.classList.remove('hidden');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(WEB_APP_URL, {
+                    method: 'POST',
+                    mode: 'no-cors', // เนื่องจากเป็น GAS Web App ในรูปแบบ API
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // ส่งข้อความยืนยันกลับเข้า LINE
+                if (liff.isInClient()) {
+                    await liff.sendMessages([{
+                        type: 'text',
+                        text: `✅ บันทึกข้อมูลเรียบร้อย\n\nผู้แจ้ง: ${payload.lineName}\nโปรเจกต์: ${payload.project}\nเวลา: ${new Date().toLocaleString('th-TH')}`
+                    }]);
+                }
+
+                // ปิดหน้าต่าง LIFF
+                setTimeout(() => {
+                    liff.closeWindow();
+                }, 1500);
+
+            } catch (err) {
+                console.error("Submission Error:", err);
+                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+                loader.classList.add('hidden');
+                submitBtn.disabled = false;
+            }
+        });
+
+        // Start
+        window.onload = initLiff;
+    </script>
+</body>
+</html>
