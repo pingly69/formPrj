@@ -19,7 +19,6 @@
         .loader { border-top-color: var(--hrientec-blue); animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        /* สไตล์สำหรับการแจ้งเตือนเมื่อยังไม่ได้ตั้งค่า */
         .config-warning {
             background-color: #fee2e2;
             border: 1px solid #ef4444;
@@ -35,40 +34,39 @@
     <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg overflow-hidden border-t-4 border-[#004a99]">
         <!-- Header Section -->
         <div class="p-6 text-center border-b">
-            <h1 class="text-2xl font-bold text-[#004a99]">ระบบบันทึกข้อมูล</h1>
+            <h1 class="text-2xl font-bold text-[#004a99]">Data Collection</h1>
             <p class="text-gray-500 text-sm mt-1">Hrientec Engineering & Technology</p>
         </div>
 
         <!-- Form Section -->
         <form id="dataForm" class="p-6 space-y-5">
-            <!-- Warning Alert for developers -->
             <div id="setupWarning" class="hidden config-warning">
-                <strong>คำเตือน:</strong> กรุณาระบุ <code>WEB_APP_URL</code> และ <code>LIFF_ID</code> ในโค้ดก่อนเริ่มใช้งาน
+                <strong>Warning:</strong> Please configure <code>WEB_APP_URL</code> and <code>LIFF_ID</code> in the code.
             </div>
 
-            <!-- 1. ชื่อผู้ใช้งาน LINE (Auto-filled) -->
+            <!-- 1. LINE Name (Auto-filled) -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">ชื่อผู้แจ้ง (LINE Name)</label>
-                <input type="text" id="lineName" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 shadow-sm focus:outline-none" placeholder="กำลังโหลดข้อมูล LINE...">
+                <label class="block text-sm font-medium text-gray-700">Name (LINE Name)</label>
+                <input type="text" id="lineName" readonly class="mt-1 block w-full px-3 py-2 bg-gray-100 border border-gray-300 rounded-md text-gray-600 shadow-sm focus:outline-none" placeholder="Loading profile...">
             </div>
 
-            <!-- 2. เลือกโปรเจกต์ (Dynamic Dropdown) -->
+            <!-- 2. Project Selection -->
             <div>
                 <label class="block text-sm font-medium text-gray-700">Project <span class="text-red-500">*</span></label>
                 <select id="project" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]">
-                    <option value="" disabled selected>-- กำลังโหลดข้อมูลโปรเจกต์... --</option>
+                    <option value="" disabled selected>-- Loading projects... --</option>
                 </select>
             </div>
 
-            <!-- 3. รายละเอียดเพิ่มเติม -->
+            <!-- 3. Details -->
             <div>
-                <label class="block text-sm font-medium text-gray-700">รายละเอียดงาน</label>
-                <textarea id="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]" placeholder="ระบุรายละเอียด..."></textarea>
+                <label class="block text-sm font-medium text-gray-700">Work Details</label>
+                <textarea id="details" rows="3" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-[#004a99] focus:border-[#004a99]" placeholder="Enter details..."></textarea>
             </div>
 
             <!-- Submit Button -->
             <button type="submit" id="submitBtn" class="w-full btn-primary text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:bg-gray-400">
-                <span id="btnText">บันทึกข้อมูล</span>
+                <span id="btnText">Submit Data</span>
             </button>
         </form>
     </div>
@@ -76,36 +74,27 @@
     <!-- Processing Overlay -->
     <div id="loader" class="fixed inset-0 bg-black/50 hidden flex flex-col items-center justify-center z-50">
         <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-        <h2 class="text-white text-xl font-semibold">กำลังประมวลผล...</h2>
+        <h2 class="text-white text-xl font-semibold">Processing...</h2>
     </div>
 
     <script>
         // --- CONFIGURATION ---
-        // คำเตือน: ต้องแทนที่ค่าเหล่านี้ด้วย URL และ ID จริงจากระบบของคุณ
-        const WEB_APP_URL = "URL_APPS_SCRIPT_ที่_DEPLOY_แล้ว"; 
-        const LIFF_ID = "LIFF_ID_ของคุณ"; 
+        const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwQG8oY7s7nI1PqIKwkFw47tOxUXmOJ5oanQR6ebhri3L8XNr6OW1edt1FCnYFIGP2Y/exec"; 
+        const LIFF_ID = "2009016720-tTy5Qvq2"; 
 
         let userData = { name: '', userId: '' };
 
-        /**
-         * ตรวจสอบความถูกต้องของ Configuration
-         */
         function isConfigValid() {
             return WEB_APP_URL.startsWith("https://") && !LIFF_ID.includes("_ของคุณ");
         }
 
-        /**
-         * 1. Initialize LIFF
-         */
         async function initLiff() {
             if (!isConfigValid()) {
                 document.getElementById('setupWarning').classList.remove('hidden');
-                document.getElementById('project').innerHTML = '<option value="">-- กรุณาตั้งค่า URL ในโค้ด --</option>';
-                console.warn("Configuration missing: Please set WEB_APP_URL and LIFF_ID");
+                document.getElementById('project').innerHTML = '<option value="">-- Please set URL in code --</option>';
                 return;
             }
 
-            // เริ่มโหลดข้อมูลทันที
             fetchProjects(); 
             
             try {
@@ -120,25 +109,20 @@
                 }
             } catch (err) {
                 console.error("LIFF Init Error:", err);
-                // จัดการ Error กรณี ID ไม่ถูกต้อง
-                document.getElementById('lineName').placeholder = "ไม่สามารถเชื่อมต่อ LINE ได้";
+                document.getElementById('lineName').placeholder = "Cannot connect to LINE";
             }
         }
 
-        /**
-         * 2. Fetch Projects from Google Sheets
-         */
         async function fetchProjects() {
             const select = document.getElementById('project');
             try {
-                // ตรวจสอบ URL เบื้องต้นก่อนเรียก fetch
                 const response = await fetch(WEB_APP_URL);
                 if (!response.ok) throw new Error("Network response was not ok");
                 
                 const data = await response.json();
                 
                 if (data.status === "success" && data.projects) {
-                    select.innerHTML = '<option value="">-- กรุณาเลือกโปรเจกต์ --</option>';
+                    select.innerHTML = '<option value="">-- Please select project --</option>';
                     data.projects.forEach(p => {
                         let opt = document.createElement('option');
                         opt.value = p;
@@ -150,18 +134,15 @@
                 }
             } catch (err) {
                 console.error("Fetch Projects Error:", err);
-                select.innerHTML = '<option value="">-- ไม่สามารถโหลดข้อมูลได้ (ตรวจสอบ URL) --</option>';
+                select.innerHTML = '<option value="">-- Failed to load projects --</option>';
             }
         }
 
-        /**
-         * 3. Handle Form Submission
-         */
         document.getElementById('dataForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             if (!isConfigValid()) {
-                alert("ระบบยังไม่ได้ตั้งค่า URL สำหรับบันทึกข้อมูล");
+                alert("System is not configured yet.");
                 return;
             }
 
@@ -179,7 +160,6 @@
             submitBtn.disabled = true;
 
             try {
-                // ส่งข้อมูลไปยัง Google Apps Script
                 await fetch(WEB_APP_URL, {
                     method: 'POST',
                     mode: 'no-cors', 
@@ -187,28 +167,26 @@
                     body: JSON.stringify(payload)
                 });
 
-                // ส่งข้อความยืนยันกลับเข้า LINE หากเปิดในแอป
+                // --- ENGLISH RETURN MESSAGE ---
                 if (liff.isInClient()) {
                     await liff.sendMessages([{
                         type: 'text',
-                        text: `✅ Saved successfully\n\nName: ${payload.lineName}\nProject: ${payload.project}\nTime: ${new Date().toLocaleString('th-TH')}`
+                        text: `✅ Submission Successful\n\nName: ${payload.lineName}\nProject: ${payload.project}\nTime: ${new Date().toLocaleString('en-US', { hour12: false })}`
                     }]);
                 }
 
-                // แสดงผลสำเร็จก่อนปิดหน้าต่าง
                 setTimeout(() => {
                     liff.closeWindow();
                 }, 1500);
 
             } catch (err) {
                 console.error("Submission Error:", err);
-                alert("เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง");
+                alert("Error while saving data. Please try again.");
                 loader.classList.add('hidden');
                 submitBtn.disabled = false;
             }
         });
 
-        // Start
         window.onload = initLiff;
     </script>
 </body>
